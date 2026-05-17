@@ -29,7 +29,14 @@ export function initFiltering(elements, indexes) {
             state[field] = '';
         }
 
+        const nextState = {...state};
+        const totalFrom = parseFloat(nextState.totalFrom);
+        const totalTo = parseFloat(nextState.totalTo);
+        nextState.total = [totalFrom, totalTo];
+        delete nextState.totalFrom;
+        delete nextState.totalTo;
+
         // @todo: #4.5 — отфильтровать данные используя компаратор
-        return data.filter(row => comparer(row, state));
+        return data.filter((row) => comparer(row, nextState));
     }
 }

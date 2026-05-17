@@ -39,9 +39,9 @@ function render(action) {
     let result = [...data]; // копируем для последующего изменения
     // @todo: использование
     result = applySearching(result, state, action);
+    result = applyFiltering(result, state, action);
     result = applySorting(result, state, action);
     result = applyPagination(result, state, action);
-    result = applyFiltering(result, state, action);
     sampleTable.render(result)
 }
 
@@ -56,7 +56,7 @@ const sampleTable = initTable({
 const searchBlock = sampleTable.beforeClones[0];
 const headerBlock = sampleTable.beforeClones[1];
 const filterBlock = sampleTable.beforeClones[2];
-const applySearching = initSearching(searchBlock.elements.search);
+const applySearching = initSearching('search');
 const applyFiltering = initFiltering(filterBlock.elements, {
     searchBySeller: indexes.sellers 
 });
