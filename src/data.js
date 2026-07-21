@@ -1,4 +1,5 @@
 import {makeIndex} from "./lib/utils.js";
+import {sortCollection} from "./lib/sort.js";
 
 export function initData(sourceData) {
     const sellers = makeIndex(sourceData.sellers, 'id', v => `${v.first_name} ${v.last_name}`);
@@ -44,11 +45,7 @@ export function initData(sourceData) {
 
         if (query.sort) {
             const [field, order] = String(query.sort).split(':');
-            items.sort((a, b) => {
-                if (a[field] === b[field]) return 0;
-                const result = a[field] > b[field] ? 1 : -1;
-                return order === 'desc' ? -result : result;
-            });
+            items = sortCollection(items, field, order);
         }
 
         const total = items.length;
