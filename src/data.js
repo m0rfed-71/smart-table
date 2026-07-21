@@ -1,56 +1,78 @@
-const BASE_URL = 'https://webinars.webdev.education-services.ru/sp7-api';
+import {makeIndex} from "./lib/utils.js";
 
 export function initData(sourceData) {
-    let sellers;
-    let customers;
-    let lastResult;
-    let lastQuery;
-
-    const mapRecords = (data) => data.map(item => ({
+    const sellers = makeIndex(sourceData.sellers, 'id', v => `${v.first_name} ${v.last_name}`);
+    const customers = makeIndex(sourceData.customers, 'id', v => `${v.first_name} ${v.last_name}`);
+    const data = sourceData.purchase_records.map(item => ({
         id: item.receipt_id,
         date: item.date,
-        seller: sellers?.[item.seller_id] ?? '',
-        customer: customers?.[item.customer_id] ?? '',
+        seller: sellers[item.seller_id],
+        customer: customers[item.customer_id],
         total: item.total_amount
     }));
 
-    const fetchIndexes = async () => {
-        const [sellersData, customersData] = await Promise.all([
-            fetch(`${BASE_URL}/sellers`).then(res => res.json()),
-            fetch(`${BASE_URL}/customers`).then(res => res.json()),
-        ]);
-        sellers = sellersData;
-        customers = customersData;
+    let lastResult;
+    let lastQuery;
+
+    const applyQuery = (query = {}) => {
+        let items = [...data];
+
+        if (query.search) {
+            const term = String(query.search).toLowerCase();
+            items = items.filter(row =>
+                ['date', 'customer', 'seller', 'total']
+                    .some(key => String(row[key]).toLowerCase().includes(term))
+            );
+        }
+
+        for (const [key, value] of Object.entries(query)) {
+            const match = key.match(/^filter\[(.+)\]$/);
+            if (!match || value === '' || value == null) continue;
+
+            const field = match[1];
+            if (field === 'totalFrom') {
+                const from = parseFloat(value);
+                if (!Number.isNaN(from)) items = items.filter(row => row.total >= from);
+            } else if (field === 'totalTo') {
+                const to = parseFloat(value);
+                if (!Number.isNaN(to)) items = items.filter(row => row.total <= to);
+            } else {
+                const needle = String(value).toLowerCase();
+                items = items.filter(row => String(row[field]).toLowerCase().includes(needle));
+            }
+        }
+
+        if (query.sort) {
+            const [field, order] = String(query.sort).split(':');
+            items.sort((a, b) => {
+                if (a[field] === b[field]) return 0;
+                const result = a[field] > b[field] ? 1 : -1;
+                return order === 'desc' ? -result : result;
+            });
+        }
+
+        const total = items.length;
+        const page = parseInt(query.page, 10) || 1;
+        const limit = parseInt(query.limit, 10) || 10;
+        const start = (page - 1) * limit;
+
+        return {
+            total,
+            items: items.slice(start, start + limit)
+        };
     };
 
-    const getIndexes = async () => {
-        if (!sellers || !customers) {
-            await fetchIndexes();
-        }
-        return { sellers, customers };
-    };
+    const getIndexes = async () => ({ sellers, customers });
 
     const getRecords = async (query = {}, isUpdated = false) => {
-        if (!sellers || !customers) {
-            await fetchIndexes();
-        }
-
-        const qs = new URLSearchParams(query);
-        const nextQuery = qs.toString();
+        const nextQuery = new URLSearchParams(query).toString();
 
         if (lastQuery === nextQuery && !isUpdated) {
             return lastResult;
         }
 
-        const response = await fetch(`${BASE_URL}/records?${nextQuery}`);
-        const records = await response.json();
-
         lastQuery = nextQuery;
-        lastResult = {
-            total: records.total,
-            items: mapRecords(records.items)
-        };
-
+        lastResult = applyQuery(query);
         return lastResult;
     };
 

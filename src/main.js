@@ -81,10 +81,16 @@ const appRoot = document.querySelector('#app');
 appRoot.appendChild(sampleTable.container);
 
 async function init() {
-    const indexes = await API.getIndexes();
-    updateIndexes({
-        searchBySeller: indexes.sellers
-    });
+    try {
+        const indexes = await API.getIndexes();
+        updateIndexes({
+            searchBySeller: indexes.sellers
+        });
+    } catch (error) {
+        console.error('Failed to init indexes', error);
+    }
+
+    await render();
 }
 
-init().then(render);
+init();
