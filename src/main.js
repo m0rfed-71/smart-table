@@ -21,8 +21,8 @@ const API = initData(sourceData);
  */
 function collectState() {
     const state = processFormData(new FormData(sampleTable.container));
-    const rowsPerPage=parseInt(state.rowsPerPage);
-    const page=parseInt(state.page ?? 1);
+    const rowsPerPage = parseInt(state.rowsPerPage) || 10;
+    const page = parseInt(state.page) || 1;
     return {
         ...state,
         rowsPerPage,
@@ -34,15 +34,28 @@ function collectState() {
  * Перерисовка состояния таблицы при любых изменениях
  * @param {HTMLButtonElement?} action
  */
+let lastFiltersQuery = '';
+
 async function render(action) {
-    let state = collectState(); // состояние полей из таблицы
+    let state = collectState();
     let query = {};
     // @todo: использование
-    // query = applySearching(query, state, action);
+    query = applySearching(query, state, action);
     query = applyFiltering(query, state, action);
-    // query = applySorting(query, state, action);
+    query = applySorting(query, state, action);
+
+    // поиск/фильтры изменились — всегда с первой страницы
+    const filtersQuery = JSON.stringify(query);
+    if (filtersQuery !== lastFiltersQuery) {
+        state.page = 1;
+        lastFiltersQuery = filtersQuery;
+    }
+
     query = applyPagination(query, state, action);
     const {total, items} = await API.getRecords(query);
+
+    state.page = Number(query.page);
+    state.rowsPerPage = Number(query.limit);
     updatePagination(total, state);
     sampleTable.render(items);
 }
