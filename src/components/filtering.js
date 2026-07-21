@@ -17,18 +17,7 @@ export function initFiltering(elements, indexes) {
             );
         });
 
-    return (data, state, action) => {
-        // @todo: #4.2 — обработать очистку поля
-        if (action && action.name === 'clear') {
-            const field = action.dataset.field;
-            const control = action.form?.elements?.namedItem(field);
-
-            if (control) {
-                control.value = '';
-            }
-            state[field] = '';
-        }
-
+  
         const nextState = {...state};
         const totalFrom = parseFloat(nextState.totalFrom);
         const totalTo = parseFloat(nextState.totalTo);
