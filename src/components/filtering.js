@@ -1,31 +1,41 @@
-import {createComparison, defaultRules} from "../lib/compare.js";
+export function initFiltering(elements) {
+    const updateIndexes = (elements, indexes) => {
+        Object.keys(indexes).forEach((elementName) => {
+            elements[elementName].append(...Object.values(indexes[elementName]).map(name => {
+                const el = document.createElement('option');
+                el.textContent = name;
+                el.value = name;
+                return el;
+            }));
+        });
+    };
 
-// @todo: #4.3 — настроить компаратор
-const comparer = createComparison(defaultRules);
-export function initFiltering(elements, indexes) {
-    // @todo: #4.1 — заполнить выпадающие списки опциями
-    Object.keys(indexes)
-        .forEach((elementName) => {
-            elements[elementName].append(
-                ...Object.values(indexes[elementName])
-                    .map((name) => {
-                        const option = document.createElement('option');
-                        option.value = name;
-                        option.textContent = name;
-                        return option;
-                    })
-            );
+    const applyFiltering = (query, state, action) => {
+        // @todo: #4.2 — обработать очистку поля
+        if (action && action.name === 'clear') {
+            const field = action.dataset.field;
+            const control = action.form?.elements?.namedItem(field);
+
+            if (control) {
+                control.value = '';
+            }
+            state[field] = '';
+        }
+
+        const filter = {};
+        Object.keys(elements).forEach(key => {
+            if (elements[key]) {
+                if (['INPUT', 'SELECT'].includes(elements[key].tagName) && elements[key].value) {
+                    filter[`filter[${elements[key].name}]`] = elements[key].value;
+                }
+            }
         });
 
-  
-        const nextState = {...state};
-        const totalFrom = parseFloat(nextState.totalFrom);
-        const totalTo = parseFloat(nextState.totalTo);
-        nextState.total = [totalFrom, totalTo];
-        delete nextState.totalFrom;
-        delete nextState.totalTo;
+        return Object.keys(filter).length ? Object.assign({}, query, filter) : query;
+    };
 
-        // @todo: #4.5 — отфильтровать данные используя компаратор
-        return data.filter((row) => comparer(row, nextState));
-    }
+    return {
+        applyFiltering,
+        updateIndexes
+    };
 }

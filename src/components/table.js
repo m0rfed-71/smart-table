@@ -16,9 +16,14 @@ export function initTable(settings, onAction) {
         const block = cloneTemplate(before[i]);
         root.container.prepend(block.container);
         root.beforeClones.unshift(block);
+        root[before[i]] = block;
     }
 
-    root.afterClones = after.map((id) => cloneTemplate(id));
+    root.afterClones = after.map((id) => {
+        const block = cloneTemplate(id);
+        root[id] = block;
+        return block;
+    });
     if (root.afterClones.length) {
         root.elements.rows.after(...root.afterClones.map((b) => b.container));
     }

@@ -13,7 +13,7 @@ import {initFiltering} from "./components/filtering.js";
 import {initSearching} from "./components/searching.js";
 
 // Исходные данные используемые в render()
-const {data, ...indexes} = initData(sourceData);
+const API = initData(sourceData);
 
 /**
  * Сбор и обработка полей из таблицы
@@ -34,15 +34,17 @@ function collectState() {
  * Перерисовка состояния таблицы при любых изменениях
  * @param {HTMLButtonElement?} action
  */
-function render(action) {
+async function render(action) {
     let state = collectState(); // состояние полей из таблицы
-    let result = [...data]; // копируем для последующего изменения
+    let query = {};
     // @todo: использование
-    result = applySearching(result, state, action);
-    result = applyFiltering(result, state, action);
-    result = applySorting(result, state, action);
-    result = applyPagination(result, state, action);
-    sampleTable.render(result)
+    // query = applySearching(query, state, action);
+    query = applyFiltering(query, state, action);
+    // query = applySorting(query, state, action);
+    query = applyPagination(query, state, action);
+    const {total, items} = await API.getRecords(query);
+    updatePagination(total, state);
+    sampleTable.render(items);
 }
 
 const sampleTable = initTable({
@@ -57,12 +59,12 @@ const searchBlock = sampleTable.beforeClones[0];
 const headerBlock = sampleTable.beforeClones[1];
 const filterBlock = sampleTable.beforeClones[2];
 const applySearching = initSearching('search');
-const applyFiltering = initFiltering(filterBlock.elements, {
-    searchBySeller: indexes.sellers 
-});
+//const applyFiltering = initFiltering(filterBlock.elements, {
+//    searchBySeller: indexes.sellers
+//});
 
 const paginationBlock = sampleTable.afterClones[0];
-const applyPagination = initPagination(
+const {applyPagination, updatePagination} = initPagination(
     paginationBlock.elements,
     (el, page, isCurrent) => {
         const input = el.querySelector('input');
@@ -73,6 +75,9 @@ const applyPagination = initPagination(
         return el;
     }
 );
+
+const {applyFiltering, updateIndexes} = initFiltering(filterBlock.elements);
+
 const applySorting = initSorting ([
     headerBlock.elements.sortByDate,
     headerBlock.elements.sortByTotal,
@@ -80,5 +85,12 @@ const applySorting = initSorting ([
 
 const appRoot = document.querySelector('#app');
 appRoot.appendChild(sampleTable.container);
+async function init() {
+    const indexes = await API.getIndexes();
 
-render();
+    updateIndexes(sampleTable.filter.elements, {
+        searchBySeller: indexes.sellers
+    });
+}
+
+init().then(render);
