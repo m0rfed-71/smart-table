@@ -1,12 +1,18 @@
 export function initFiltering(elements) {
-    const updateIndexes = (elements, indexes) => {
+    const updateIndexes = (indexes) => {
         Object.keys(indexes).forEach((elementName) => {
-            elements[elementName].append(...Object.values(indexes[elementName]).map(name => {
+            const target = elements[elementName];
+            if (!target) return;
+
+            const defaultOption = target.querySelector('option[value=""]')?.cloneNode(true);
+            const options = Object.values(indexes[elementName]).map(name => {
                 const el = document.createElement('option');
                 el.textContent = name;
                 el.value = name;
                 return el;
-            }));
+            });
+
+            target.replaceChildren(...[defaultOption, ...options].filter(Boolean));
         });
     };
 
@@ -19,15 +25,18 @@ export function initFiltering(elements) {
             if (control) {
                 control.value = '';
             }
-            state[field] = '';
+            if (field) {
+                state[field] = '';
+            }
         }
 
         const filter = {};
         Object.keys(elements).forEach(key => {
-            if (elements[key]) {
-                if (['INPUT', 'SELECT'].includes(elements[key].tagName) && elements[key].value) {
-                    filter[`filter[${elements[key].name}]`] = elements[key].value;
-                }
+            const el = elements[key];
+            if (!el) return;
+
+            if (['INPUT', 'SELECT'].includes(el.tagName) && el.value) {
+                filter[`filter[${el.name}]`] = el.value;
             }
         });
 

@@ -21,8 +21,8 @@ const API = initData(sourceData);
  */
 function collectState() {
     const state = processFormData(new FormData(sampleTable.container));
-    const rowsPerPage = parseInt(state.rowsPerPage) || 10;
-    const page = parseInt(state.page) || 1;
+    const rowsPerPage = parseInt(state.rowsPerPage ?? '10', 10) || 10;
+    const page = parseInt(state.page ?? 1, 10) || 1;
     return {
         ...state,
         rowsPerPage,
@@ -34,51 +34,39 @@ function collectState() {
  * Перерисовка состояния таблицы при любых изменениях
  * @param {HTMLButtonElement?} action
  */
-let lastFiltersQuery = '';
-
 async function render(action) {
-    let state = collectState();
-    let query = {};
-    // @todo: использование
-    query = applySearching(query, state, action);
-    query = applyFiltering(query, state, action);
-    query = applySorting(query, state, action);
+    try {
+        const state = collectState();
+        let query = {};
 
-    // поиск/фильтры изменились — всегда с первой страницы
-    const filtersQuery = JSON.stringify(query);
-    if (filtersQuery !== lastFiltersQuery) {
-        state.page = 1;
-        lastFiltersQuery = filtersQuery;
+        query = applySearching(query, state, action);
+        query = applyFiltering(query, state, action);
+        query = applySorting(query, state, action);
+        query = applyPagination(query, state, action);
+
+        const {total, items} = await API.getRecords(query);
+        updatePagination(total, query);
+        sampleTable.render(items);
+    } catch (error) {
+        console.error('Failed to render table', error);
     }
-
-    query = applyPagination(query, state, action);
-    const {total, items} = await API.getRecords(query);
-
-    state.page = Number(query.page);
-    state.rowsPerPage = Number(query.limit);
-    updatePagination(total, state);
-    sampleTable.render(items);
 }
 
 const sampleTable = initTable({
     tableTemplate: 'table',
     rowTemplate: 'row',
-    before: ['search','header','filter'],
+    before: ['search', 'header', 'filter'],
     after: ['pagination']
 }, render);
 
-// @todo: инициализация
-const searchBlock = sampleTable.beforeClones[0];
-const headerBlock = sampleTable.beforeClones[1];
-const filterBlock = sampleTable.beforeClones[2];
 const applySearching = initSearching('search');
-//const applyFiltering = initFiltering(filterBlock.elements, {
-//    searchBySeller: indexes.sellers
-//});
-
-const paginationBlock = sampleTable.afterClones[0];
+const applySorting = initSorting([
+    sampleTable.header.elements.sortByDate,
+    sampleTable.header.elements.sortByTotal,
+]);
+const {applyFiltering, updateIndexes} = initFiltering(sampleTable.filter.elements);
 const {applyPagination, updatePagination} = initPagination(
-    paginationBlock.elements,
+    sampleTable.pagination.elements,
     (el, page, isCurrent) => {
         const input = el.querySelector('input');
         const label = el.querySelector('span');
@@ -89,19 +77,12 @@ const {applyPagination, updatePagination} = initPagination(
     }
 );
 
-const {applyFiltering, updateIndexes} = initFiltering(filterBlock.elements);
-
-const applySorting = initSorting ([
-    headerBlock.elements.sortByDate,
-    headerBlock.elements.sortByTotal,
-])
-
 const appRoot = document.querySelector('#app');
 appRoot.appendChild(sampleTable.container);
+
 async function init() {
     const indexes = await API.getIndexes();
-
-    updateIndexes(sampleTable.filter.elements, {
+    updateIndexes({
         searchBySeller: indexes.sellers
     });
 }
