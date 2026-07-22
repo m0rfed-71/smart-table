@@ -34,6 +34,12 @@ function collectState() {
  * Перерисовка состояния таблицы при любых изменениях
  * @param {HTMLButtonElement?} action
  */
+/**
+ * Перерисовка состояния таблицы при любых изменениях
+ * @param {HTMLButtonElement?} action
+ */
+let lastFiltersQuery = '';
+
 async function render(action) {
     try {
         const state = collectState();
@@ -42,6 +48,13 @@ async function render(action) {
         query = applySearching(query, state, action);
         query = applyFiltering(query, state, action);
         query = applySorting(query, state, action);
+
+        const filtersQuery = JSON.stringify(query);
+        if (filtersQuery !== lastFiltersQuery) {
+            state.page = 1;
+            lastFiltersQuery = filtersQuery;
+        }
+
         query = applyPagination(query, state, action);
 
         const {total, items} = await API.getRecords(query);
