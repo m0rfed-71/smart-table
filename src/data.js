@@ -27,6 +27,7 @@ export function initData(sourceData) {
         if (!sellers || !customers) {
             await fetchIndexes();
         }
+
         return { sellers, customers };
     };
 
